@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "members",
 ]
 AUTH_USER_MODEL = "members.User"
+LOGIN_URL = '/members/login/'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -52,11 +53,12 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "summer_project.urls"
+# CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -113,10 +115,11 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
+# static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

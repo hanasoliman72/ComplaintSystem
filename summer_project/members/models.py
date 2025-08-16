@@ -65,7 +65,7 @@ class Complaint(models.Model):
     Description = models.TextField()
     Status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     DepartmentId = models.ForeignKey(
-        Department, null=True, blank=True, on_delete=models.SET_NULL, related_name="complaints"
+        Department, null=True, blank=True, on_delete=models.SET_NULL, related_name="complaints",
     )
     CreatedDate = models.DateTimeField(auto_now_add=True)
 

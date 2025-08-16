@@ -1,0 +1,20 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+    Student Dashboard
+{% endblock %}
+
+{% block content %}
+
+    <h1>Student Dashboard</h1>
+    <p>Welcome, {{ user.Name }}!</p>
+    <p>Role: {{ user.Role }}</p>
+    <p>Email: {{ user.email }}</p>
+    <p>GPA: {{ user.GPA }}</p>
+    {% if user.DepartmentId %}
+        <p>Department: {{ user.DepartmentId.DepartmentName }}</p>
+    {% else %}
+        <p>Department: Not assigned</p>
+    {% endif %}
+    <p><a href="{% url 'members:submit_complaint' %}">This is your dashboard for submitting and viewing complaints or suggestions.</a></p>
+{% endblock %}

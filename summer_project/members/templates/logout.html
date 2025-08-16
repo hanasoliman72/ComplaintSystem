@@ -1,0 +1,14 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+    User Logout
+{% endblock %}
+
+{% block content %}
+    <h1>User Logout</h1>
+    <p>Are you sure you want to log out?</p>
+    <form class="form-with-validation" action="{% url 'members:logout' %}" method="post">
+        {% csrf_token %}
+        <button class="form-submit">Logout</button>
+    </form>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+    User Login
+{% endblock %}
+
+{% block content %}
+    <h1>User Login</h1>
+    {% if form.errors %}
+        <p style="color: #ff0000;">Invalid username or password. Please try again.</p>
+    {% endif %}
+    <form class="form-with-validation" action="{% url 'members:login' %}" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}" />
+        {% endif %}
+        <button class="form-submit">Submit</button>
+    </form>
+{% endblock %}
