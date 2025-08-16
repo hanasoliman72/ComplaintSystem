@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+    Department Manager Dashboard
+{% endblock %}
+
+{% block content %}
+    <h1>Department Manager Dashboard</h1>
+    <p>Welcome, {{ user.Name }}!</p>
+    <p>Role: {{ user.Role }}</p>
+    <p>Email: {{ user.email }}</p>
+    {% if user.DepartmentId %}
+        <p>Department: {{ user.DepartmentId.DepartmentName }}</p>
+    {% else %}
+        <p>Department: Not assigned</p>
+    {% endif %}
+    <p>This is your dashboard for managing complaints in your department.</p>
+{% endblock %}
