@@ -29,17 +29,13 @@ class User(AbstractUser):
     # primary key (replaces default id)
     UserId = models.AutoField(primary_key=True)
 
-    # extra fields
     Name = models.CharField(max_length=255)
     GPA = models.DecimalField(max_digits=4, decimal_places=2, default=0)
-    # override email to make it unique (recommended). Do this before first migration.
     email = models.EmailField(unique=True)
     Role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="Student")
     DepartmentId = models.ForeignKey(
         Department, null=True, blank=True, on_delete=models.SET_NULL, related_name="users"
     )
-
-    # keep username as login field (change to "email" if you want email-login)
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email", "Name", "Role"]
 
@@ -81,6 +77,8 @@ class Response(models.Model):
     )
     Message = models.TextField()
     ResponseDate = models.DateTimeField(auto_now_add=True)
+    VisibleToStudent = models.BooleanField(default=False)
+    PublishedAt = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
         if self.SenderId and self.SenderId.Role not in ("DepartmentManager", "GeneralManager"):

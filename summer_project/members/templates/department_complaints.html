@@ -37,7 +37,7 @@
                 <td>{{ complaint.Description }}</td>
                 <td>{{ complaint.CreatedDate }}</td>
                 <td>
-                    <form action="{% url 'members:departmentComplaints' %}" method="POST">
+                    <form action="{% url 'members:department_complaints' %}" method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="complaint_id" value="{{ complaint.ComplaintId }}">
                         <textarea name="message_text" required></textarea>

@@ -1,12 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-<h1>Thank You!</h1>
-    <p>Your complaint/suggestion has been submitted successfully. Your tracking code is: {{ request.session.tracking_code }}</p>
-    <a href="{% url 'members:submit_complaint' %}">Submit Another</a>
-</body>
-</html>
+{% extends "layout.html" %}
+
+{% block title %}Submitted Successfully{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="alert alert-success text-center">
+    <h2>✅ Complaint Submitted Successfully</h2>
+    <p>Your tracking code has been sent to your email ({{ user.email }}). Please check your inbox (and spam/junk folder) to find it.</p>
+    <p>Use the tracking code to monitor the status of your complaint or suggestion.</p>
+  </div>
+
+  <div class="text-center mt-3">
+    <a href="{% url 'members:track_complaint' %}" class="btn btn-primary">
+      Track Your Complaint
+    </a>
+    <a href="{% url 'members:student_dashboard' %}" class="btn btn-secondary">
+      Back to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

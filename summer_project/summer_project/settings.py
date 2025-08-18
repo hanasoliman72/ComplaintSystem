@@ -54,7 +54,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "summer_project.urls"
 # CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
-
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
+EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
+DEFAULT_FROM_EMAIL = 'hanasmsalah105@gmail.com'
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -80,6 +86,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            'timeout': 20,  # wait 20 seconds before "database is locked"
+        }
     }
 }
 

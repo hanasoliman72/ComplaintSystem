@@ -11,4 +11,6 @@
     <p>Email: {{ user.email }}</p>
     <p>This is your dashboard for managing departments and department managers.</p>
     <p><a href="{% url 'admin:index' %}">Go to Admin Interface</a> to add departments or users.</p>
+    <p><a href="{% url 'members:general_manager_responses' %}">View all responses</a></p>
+    <p><a href="{% url 'members:all_complaints' %}">View all complaints</a></p>
 {% endblock %}

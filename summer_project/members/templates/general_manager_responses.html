@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+
+{% block title %}General Manager - Responses{% endblock %}
+
+{% block content %}
+<h1>All Responses</h1>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Complaint Title</th>
+        <th>Response Message</th>
+        <th>Sender</th>
+        <th>Department</th>
+        <th>Response Date</th>
+        <th>Visible?</th>
+        <th>Action</th>
+    </tr>
+
+    {% for response in responses %}
+    <tr>
+        <td>{{ response.ComplaintId.Title }}</td>
+        <td>{{ response.Message }}</td>
+        <td>{{ response.SenderId.Name }}</td>
+        <td>{{ response.SenderId.DepartmentId.DepartmentName }}</td>
+        <td>{{ response.ResponseDate }}</td>
+        <td>{{ response.VisibleToStudent|yesno:"Yes,No" }}</td>
+        <td>
+            <form method="post" action="{% url 'members:publish_response' response.ResponseId %}">
+                {% csrf_token %}
+                {% if response.VisibleToStudent %}
+                    <input type="hidden" name="action" value="unpublish">
+                    <button type="submit">Hide from Student</button>
+                {% else %}
+                    <input type="hidden" name="action" value="publish">
+                    <button type="submit">Send to Student</button>
+                {% endif %}
+            </form>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="7">No responses found.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
+
+{#{% extends "layout.html" %}#}
+{##}
+{#{% block title %}General Manager - Responses{% endblock %}#}
+{##}
+{#{% block content %}#}
+{#<h1>All Responses</h1>#}
+{##}
+{#<table border="1" cellpadding="8">#}
+{#    <tr>#}
+{#        <th>Complaint Title</th>#}
+{#        <th>Response Message</th>#}
+{#        <th>Sender</th>#}
+{#        <th>Department</th>#}
+{#        <th>Response Date</th>#}
+{#    </tr>#}
+{##}
+{#    {% for response in responses %}#}
+{#    <tr>#}
+{#        <td>{{ response.ComplaintId.Title }}</td>#}
+{#        <td>{{ response.Message }}</td>#}
+{#        <td>{{ response.SenderId.Name }}</td>#}
+{#        <td>{{ response.SenderId.DepartmentId.DepartmentName }}</td>#}
+{#        <td>{{ response.ResponseDate }}</td>#}
+{#    </tr>#}
+{#    {% empty %}#}
+{#    <tr>#}
+{#        <td colspan="5">No responses found.</td>#}
+{#    </tr>#}
+{#    {% endfor %}#}
+{#</table>#}
+{#{% endblock %}#}

@@ -3,15 +3,18 @@ from . import views
 app_name = "members"
 
 urlpatterns = [
-    path('register/', views.register_view, name="register"),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
+    path('register/', views.RegisterView, name="register"),
+    path('login/', views.LoginView, name='login'),
+    path('logout/', views.LogoutView, name='logout'),
 
-    path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
-    path('department/dashboard/', views.department_manager_dashboard, name='department_manager_dashboard'),
-    path('general/dashboard/', views.general_manager_dashboard, name='general_manager_dashboard'),
-    path('allComplaints/', views.allComplaints_view, name="allComplaints"),
-    path('departmentComplaints/', views.departmentComplaints_view, name="departmentComplaints"),
-    path('submit/', views.submit_complaint, name='submit_complaint'),
-    path('success/', views.complaint_success, name='complaint_success'),
+    path('student/dashboard/', views.StudentDashboard, name='student_dashboard'),
+    path('department/dashboard/', views.DepartmentManagerDashboard, name='department_manager_dashboard'),
+    path('general/dashboard/', views.GeneralManagerDashboard, name='general_manager_dashboard'),
+    path('allComplaints/', views.AllComplaints, name="all_complaints"),
+    path('departmentComplaints/', views.DepartmentComplaints, name="department_complaints"),
+    path('submit/', views.SubmitComplaint, name='submit_complaint'),
+    path('success/', views.Success, name='success'),
+    path("general_manager_responses/", views.GeneralManagerResponses, name="general_manager_responses"),
+    path("general_manager_responses/<int:response_id>/publish/", views.PublishResponse, name="publish_response"),
+    path("track/", views.TrackComplaint, name="track_complaint"),
 ]
