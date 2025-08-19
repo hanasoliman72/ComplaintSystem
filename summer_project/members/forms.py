@@ -20,6 +20,12 @@ class CustomUserCreationForm(UserCreationForm):
             "password2",
         )
 
+    def clean_email(self):
+        email = self.cleaned_data.get("email", "").lower()
+        if not email.endswith("@compit.aun.edu.eg"):
+            self.add_error("email", "")
+        return email
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data["email"]

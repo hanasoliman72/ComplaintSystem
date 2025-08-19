@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,8 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
-# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",

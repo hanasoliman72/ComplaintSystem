@@ -26,17 +26,21 @@
         <a href="{% url 'members:track_complaint' %}">Track your complaint</a>
     </p>
 {% endblock %}
-
 {% block extra_scripts %}
 <script type="text/javascript">
     (function(d, m){
-        var kommunicateSettings =
-            {"appId":"2ef0af9bb0bddc92901af4102c4f2045d","popupWidget":true,"automaticChatOpenOnNavigation":true};
+        var kommunicateSettings = {
+            "appId": "2ef0af9bb0bddc92901af4102c4f2045d",
+            "popupWidget": true,
+            "automaticChatOpenOnNavigation": true,
+            "userId": "{{ user.email|lower }}",
+            "userName": "{{ user.Name }}",
+            "authenticationTypeId": 1
+        };
         var s = document.createElement("script"); s.type = "text/javascript"; s.async = true;
         s.src = "https://widget.kommunicate.io/v2/kommunicate.app";
         var h = document.getElementsByTagName("head")[0]; h.appendChild(s);
         window.kommunicate = m; m._globals = kommunicateSettings;
     })(document, window.kommunicate || {});
-/* NOTE : Use web server to view HTML files as real-time update will not work if you directly open the HTML file in the browser. */
 </script>
 {% endblock %}

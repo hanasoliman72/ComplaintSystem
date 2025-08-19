@@ -1,13 +1,17 @@
+import json
+
+from django.http import JsonResponse
 from django.urls import reverse
 from .forms import ComplaintForm
 from django.utils import timezone
 from django.contrib import messages
 from django.core.mail import send_mail
-from django.contrib.auth import login, logout
 from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout
 from django.shortcuts import  get_object_or_404
+from django.views.decorators.http import require_POST
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
-from .models import Complaint, Department, Response, _generate_tracking_code
+from .models import User, Complaint, Department, Response, _generate_tracking_code, ChatbotSession
 
 def RegisterView(request):
     if request.method == "POST":

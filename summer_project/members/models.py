@@ -93,6 +93,7 @@ class ChatbotSession(models.Model):
     UserId = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_sessions")  # Must be a Student
     SessionStart = models.DateTimeField(auto_now_add=True)
     SessionEnd = models.DateTimeField(null=True, blank=True)
+    LastActivityAt = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
         if self.UserId and self.UserId.Role != "Student":
