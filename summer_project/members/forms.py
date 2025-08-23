@@ -39,6 +39,7 @@ class LoginForm(AuthenticationForm):
     username = forms.CharField(label="Username", widget=forms.TextInput(attrs={'class': 'form-control'}))
     password = forms.CharField(label="Password", widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
+
 class ComplaintForm(forms.ModelForm):
     class Meta:
         model = Complaint
@@ -48,6 +49,7 @@ class ComplaintForm(forms.ModelForm):
             'Title': forms.TextInput(attrs={'placeholder': 'Enter a title'}),
             'Description': forms.Textarea(attrs={'placeholder': 'Enter your complaint or suggestion'}),
         }
+
 
 class CustomAuthenticationForm(AuthenticationForm):
     class Meta:

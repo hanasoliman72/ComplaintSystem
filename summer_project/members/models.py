@@ -68,6 +68,16 @@ class Complaint(models.Model):
     def __str__(self):
         return f"{self.Type} - {self.Title} ({self.TrackingCode})"
 
+class ComplaintAttachment(models.Model):
+    complaint = models.ForeignKey(
+        Complaint, on_delete=models.CASCADE, related_name="attachments"
+    )
+    file = models.FileField(upload_to="complaint_attachments/", blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment for {self.complaint.Title} - {self.file.name}"
+
 
 class Response(models.Model):
     ResponseId = models.AutoField(primary_key=True)
@@ -94,6 +104,7 @@ class ChatbotSession(models.Model):
     SessionStart = models.DateTimeField(auto_now_add=True)
     SessionEnd = models.DateTimeField(null=True, blank=True)
     LastActivityAt = models.DateTimeField(null=True, blank=True)
+    kommunicate_conversation_id = models.CharField(max_length=255, null=True, blank=True)
 
     def clean(self):
         if self.UserId and self.UserId.Role != "Student":

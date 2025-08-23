@@ -1,5 +1,4 @@
 import json
-
 from django.http import JsonResponse
 from django.urls import reverse
 from .forms import ComplaintForm
@@ -11,7 +10,7 @@ from django.contrib.auth import login, logout
 from django.shortcuts import  get_object_or_404
 from django.views.decorators.http import require_POST
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
-from .models import User, Complaint, Department, Response, _generate_tracking_code, ChatbotSession
+from .models import User, Complaint, Department, Response, _generate_tracking_code,ComplaintAttachment
 
 def RegisterView(request):
     if request.method == "POST":
@@ -121,21 +120,28 @@ def DepartmentComplaints(request):
         "complaints": complaints,
     })
 
-def SubmitComplaint(request):
+def submit_complaint(request):
     if not request.user.is_authenticated or request.user.Role != "Student":
         return redirect("home")
 
-    if request.method == 'POST':
-        form = ComplaintForm(request.POST)
+    if request.method == "POST":
+        form = ComplaintForm(request.POST, request.FILES)
         if form.is_valid():
+            # 1. احفظ الشكوى نفسها
             complaint = form.save(commit=False)
             complaint.TrackingCode = _generate_tracking_code()
             complaint.save()
 
-            # Send email with tracking code
+            # 2. حفظ المرفقات
+            files = request.FILES.getlist("file")
+            for f in files:
+                ComplaintAttachment.objects.create(complaint=complaint, file=f)
+
+            # 3. إرسال الإيميل
             try:
                 track_url = request.build_absolute_uri(
-                    reverse('members:track_complaint') + f'?tracking_code={complaint.TrackingCode}')
+                    reverse('members:track_complaint') + f'?tracking_code={complaint.TrackingCode}'
+                )
                 send_mail(
                     subject='Your Complaint Tracking Code',
                     message=(
@@ -145,7 +151,7 @@ def SubmitComplaint(request):
                         f'You can track your complaint at: {track_url}\n\n'
                         f'Thank you,\nYour University Team'
                     ),
-                    from_email='hanasmsalah105@example.com',  # Replace with your sender email
+                    from_email='hanasmsalah105@example.com',
                     recipient_list=[request.user.email],
                     fail_silently=False,
                 )
@@ -155,10 +161,11 @@ def SubmitComplaint(request):
                 messages.error(request,
                                f'Your complaint was submitted, but there was an error sending the email: {str(e)}. Please contact support.')
 
-            return redirect('members:success')
+            return redirect("members:success")
     else:
         form = ComplaintForm()
-    return render(request, 'submit_complaint.html', {'form': form})
+
+    return render(request, "submit_complaint.html", {"form": form})
 
 def Success(request):
     return render(request, 'success.html')
@@ -205,3 +212,4 @@ def TrackComplaint(request):
         "tracking_code": tracking_code,
         "searched": searched,
     })
+

@@ -10,6 +10,7 @@
           <th>Title</th>
           <th>Description</th>
           <th>Current Department</th>
+          <th>Attachments</th>
           <th>Assign to Department</th>
       </tr>
 
@@ -20,6 +21,17 @@
           <td>{{ complaint.Title }}</td>
           <td>{{ complaint.Description }}</td>
           <td>{{ complaint.DepartmentId.DepartmentName }}</td>
+          <td>
+              {% for attachment in complaint.attachments.all %}
+                  {% if attachment.file.url %}
+                      <a href="{{ attachment.file.url }}" target="_blank">
+                          {{ attachment.file.name|slice:"10:" }}
+                      </a><br>
+                  {% endif %}
+              {% empty %}
+                  No attachments
+              {% endfor %}
+          </td>
           <td>
               <form method="post">
                   {% csrf_token %}
@@ -38,4 +50,3 @@
       {% endfor %}
   </table>
 {% endblock %}
-

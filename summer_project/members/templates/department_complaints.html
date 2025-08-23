@@ -1,3 +1,62 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Department Complaints</title>-->
+<!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">-->
+<!--</head>-->
+<!--<body class="bg-light">-->
+
+<!--<div class="container mt-5">-->
+<!--    <h2 class="mb-4">Complaints & Suggestions for Your Department</h2>-->
+
+<!--    {% if messages %}-->
+<!--        {% for message in messages %}-->
+<!--            <div class="alert alert-{{ message.tags }}">{{ message }}</div>-->
+<!--        {% endfor %}-->
+<!--    {% endif %}-->
+
+<!--    <table class="table table-bordered table-striped">-->
+<!--        <thead class="table-dark">-->
+<!--        <tr>-->
+<!--            <th>Type</th>-->
+<!--            <th>Status</th>-->
+<!--            <th>Title</th>-->
+<!--            <th>Description</th>-->
+<!--            <th>Created Date</th>-->
+<!--            <th>Action</th>-->
+<!--        </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--        {% for complaint in complaints %}-->
+<!--            <tr>-->
+<!--                <td>{{ complaint.Type }}</td>-->
+<!--                <td>{{ complaint.Status }}</td>-->
+<!--                <td>{{ complaint.Title }}</td>-->
+<!--                <td>{{ complaint.Description }}</td>-->
+<!--                <td>{{ complaint.CreatedDate }}</td>-->
+<!--                <td>-->
+<!--                    <form action="{% url 'members:department_complaints' %}" method="POST">-->
+<!--                        {% csrf_token %}-->
+<!--                        <input type="hidden" name="complaint_id" value="{{ complaint.ComplaintId }}">-->
+<!--                        <textarea name="message_text" required></textarea>-->
+<!--                        <button type="submit">Send Response</button>-->
+<!--                    </form>-->
+<!--                </td>-->
+<!--            </tr>-->
+<!--        {% empty %}-->
+<!--            <tr>-->
+<!--                <td colspan="7" class="text-center">No complaints found.</td>-->
+<!--            </tr>-->
+<!--        {% endfor %}-->
+<!--        </tbody>-->
+<!--    </table>-->
+<!--</div>-->
+
+<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>-->
+<!--</body>-->
+<!--</html>-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,37 +78,51 @@
 
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
-        <tr>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Created Date</th>
-            <th>Action</th>
-        </tr>
+            <tr>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Created Date</th>
+                <th>Attachments</th>
+                <th>Action</th>
+            </tr>
         </thead>
         <tbody>
-        {% for complaint in complaints %}
-            <tr>
-                <td>{{ complaint.Type }}</td>
-                <td>{{ complaint.Status }}</td>
-                <td>{{ complaint.Title }}</td>
-                <td>{{ complaint.Description }}</td>
-                <td>{{ complaint.CreatedDate }}</td>
-                <td>
-                    <form action="{% url 'members:department_complaints' %}" method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="complaint_id" value="{{ complaint.ComplaintId }}">
-                        <textarea name="message_text" required></textarea>
-                        <button type="submit">Send Response</button>
-                    </form>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="7" class="text-center">No complaints found.</td>
-            </tr>
-        {% endfor %}
+            {% for complaint in complaints %}
+                <tr>
+                    <td>{{ complaint.Type }}</td>
+                    <td>{{ complaint.Status }}</td>
+                    <td>{{ complaint.Title }}</td>
+                    <td>{{ complaint.Description }}</td>
+                    <td>{{ complaint.CreatedDate }}</td>
+                    <td>
+                        {% if complaint.attachments.all %}
+                            {% for attachment in complaint.attachments.all %}
+                                {% if attachment.file %}
+                                    <a href="{{ attachment.file.url }}" target="_blank">
+                                        {{ attachment.file.name|slice:"10:" }}
+                                    </a><br>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            No attachments
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form action="{% url 'members:department_complaints' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="complaint_id" value="{{ complaint.ComplaintId }}">
+                            <textarea name="message_text" class="form-control mb-2" placeholder="Type your response..." required></textarea>
+                            <button type="submit" class="btn btn-primary btn-sm">Send Response</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center">No complaints found.</td>
+                </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
