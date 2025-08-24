@@ -1,50 +1,76 @@
-import json
-from django.http import JsonResponse
+from rest_framework import status
+from rest_framework.decorators import api_view
+from .serializers import *
 from django.urls import reverse
 from .forms import ComplaintForm
 from django.utils import timezone
 from django.contrib import messages
+from rest_framework.response import Response
 from django.core.mail import send_mail
+from .models import _generate_tracking_code
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout
+from django.contrib.auth import  logout
 from django.shortcuts import  get_object_or_404
-from django.views.decorators.http import require_POST
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
-from .models import User, Complaint, Department, Response, _generate_tracking_code,ComplaintAttachment
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate, login
+from django.http import JsonResponse
+import json
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
+@api_view(["POST"])
 def RegisterView(request):
-    if request.method == "POST":
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("members:student_dashboard")
-    else:
-        form = CustomUserCreationForm()
-    return render(request, "register.html", {"form": form})
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+@csrf_exempt
 def LoginView(request):
     if request.method == "POST":
-        form = CustomAuthenticationForm(data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            username = data.get("username")
+            password = data.get("password")
+
+            if not username or not password:
+                return JsonResponse({"success": False, "message": "Username and password required"}, status=400)
+
+            # Authenticate user
+            user = authenticate(request, username=username, password=password)
+            if user is None:
+                return JsonResponse({"success": False, "message": "Invalid credentials"}, status=400)
+
+            # Login user (creates session)
             login(request, user)
-            if 'next' in request.POST:
-                return redirect(request.POST.get('next'))
-            if user.Role == "Student":
-                return redirect("members:student_dashboard")
-            elif user.Role == "GeneralManager":
-                return redirect("members:general_manager_dashboard")
-            elif user.Role == "DepartmentManager":
-                return redirect("members:department_manager_dashboard")
-            else:
-                return redirect("home")  # Fallback for unexpected roles
-        else:
-            # Handle invalid form
-            return render(request, "login.html", {"form": form})
-    else:
-        form = CustomAuthenticationForm()
-    return render(request, "login.html", {"form": form})
+
+            # Decide redirect/profile by Role
+            role_redirects = {
+                "Student": "/student/profile",
+                "DepartmentManager": "/department_manager/profile",
+                "GeneralManager": "/general_manager/profile",
+            }
+            profile_url = role_redirects.get(user.Role, "/")
+
+            return JsonResponse({
+                "success": True,
+                "message": "Login successful",
+                "user": {
+                    "id": user.pk,  # Changed from user.id to user.pk
+                    "username": user.username,
+                    "email": user.email,
+                    "role": user.Role,
+                    "redirect": profile_url,
+                }
+            }, status=200)
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Server error: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
 
 def LogoutView(request):
     if request.method == "POST":
@@ -52,10 +78,58 @@ def LogoutView(request):
         return redirect("home")
     return render(request, "logout.html")
 
-def StudentDashboard(request):
-    if not request.user.is_authenticated or request.user.Role != "Student":
-        return redirect("home")
-    return render(request, "student_dashboard.html", {"user": request.user})
+
+@csrf_exempt
+def StudentProfile(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+
+    if request.method == "GET":
+        try:
+            user = request.user
+            return JsonResponse({
+                "success": True,
+                "user": {
+                    "id": user.pk,
+                    "name": user.Name,
+                    "username": user.username,
+                    "email": user.email,
+                    "gpa": float(getattr(user, "GPA", 0)) if hasattr(user, "GPA") else None,
+                }
+            }, status=200)
+        except Exception as e:
+            print("ERROR in StudentDashboard GET:", e)
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+    elif request.method == "PUT":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            user = request.user
+
+            if "name" in data:
+                user.first_name = data["name"]  # store in first_name
+            if "username" in data:
+                user.username = data["username"]
+
+            user.save()
+
+            return JsonResponse({
+                "success": True,
+                "message": "Profile updated successfully",
+                "user": {
+                    "id": user.pk,
+                    "name": user.Name,
+                    "username": user.username,
+                    "email": user.email,
+                    "gpa": float(getattr(user, "GPA", 0)) if hasattr(user, "GPA") else None,
+                }
+            }, status=200)
+        except Exception as e:
+            print("ERROR in StudentDashboard PUT:", e)
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
 
 def GeneralManagerDashboard(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -127,17 +201,14 @@ def submit_complaint(request):
     if request.method == "POST":
         form = ComplaintForm(request.POST, request.FILES)
         if form.is_valid():
-            # 1. احفظ الشكوى نفسها
             complaint = form.save(commit=False)
             complaint.TrackingCode = _generate_tracking_code()
             complaint.save()
 
-            # 2. حفظ المرفقات
             files = request.FILES.getlist("file")
             for f in files:
                 ComplaintAttachment.objects.create(complaint=complaint, file=f)
 
-            # 3. إرسال الإيميل
             try:
                 track_url = request.build_absolute_uri(
                     reverse('members:track_complaint') + f'?tracking_code={complaint.TrackingCode}'

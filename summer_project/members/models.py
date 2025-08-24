@@ -10,7 +10,6 @@ def _generate_tracking_code():
             return code
     return uuid.uuid4().hex[:12].upper()
 
-
 class Department(models.Model):
     DepartmentId = models.AutoField(primary_key=True)
     DepartmentName = models.CharField(max_length=255)
