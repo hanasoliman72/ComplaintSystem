@@ -1,21 +1,28 @@
-from rest_framework import status
-from rest_framework.decorators import api_view
+import json
+from pipes import quote
+
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+
+from summer_project.settings import DEFAULT_FROM_EMAIL
 from .serializers import *
-from django.urls import reverse
-from .forms import ComplaintForm
+from rest_framework import status
 from django.utils import timezone
 from django.contrib import messages
-from rest_framework.response import Response
-from django.core.mail import send_mail
-from .models import _generate_tracking_code
-from django.shortcuts import render, redirect
-from django.contrib.auth import  logout
-from django.shortcuts import  get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate, login
 from django.http import JsonResponse
-import json
+from django.core.mail import send_mail
+from django.contrib.auth import  logout
+from .models import _generate_tracking_code
+from rest_framework.response import Response
+from django.shortcuts import render, redirect
+from rest_framework.decorators import api_view
 from django.contrib.auth import get_user_model
+from django.shortcuts import  get_object_or_404
+from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import csrf_exempt
+
 User = get_user_model()
 
 @api_view(["POST"])
@@ -25,7 +32,6 @@ def RegisterView(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @csrf_exempt
 def LoginView(request):
@@ -71,13 +77,13 @@ def LoginView(request):
 
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
-
+@csrf_exempt
 def LogoutView(request):
     if request.method == "POST":
         logout(request)
-        return redirect("home")
-    return render(request, "logout.html")
+        return JsonResponse({"success": True, "message": "Logged out successfully"})
 
+    return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
 
 @csrf_exempt
 def StudentProfile(request):
@@ -130,16 +136,149 @@ def StudentProfile(request):
 
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
+@csrf_exempt
+def SubmitComplaint(request):
+    if request.method == "POST":
+        if not request.user.is_authenticated or request.user.Role != "Student":
+            return JsonResponse({"success": False, "message": "Unauthorized"}, status=403)
+
+        complaint = Complaint.objects.create(
+            Type=request.POST.get("type"),
+            Title=request.POST.get("title"),
+            Description=request.POST.get("description"),
+            TrackingCode=_generate_tracking_code(),
+            DepartmentId=request.user.DepartmentId
+        )
+
+        # save attachment
+        files = request.FILES.getlist("file")
+        for f in files:
+            ComplaintAttachment.objects.create(complaint=complaint, file=f)
+
+
+        # send email
+        try:
+            send_mail(
+                subject="Your Complaint Tracking Code",
+                message=(
+                    f"Dear {request.user.Name},\n\n"
+                    f"Your complaint has been submitted successfully.\n"
+                    f"Tracking Code: {complaint.TrackingCode}\n"
+                ),
+                from_email="noreply@university.com",
+                recipient_list=[request.user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return JsonResponse({"success": True, "tracking_code": complaint.TrackingCode, "email_error": str(e)})
+
+        return JsonResponse({"success": True, "tracking_code": complaint.TrackingCode})
+
+    return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
+
+@csrf_exempt
+def TrackComplaint(request):
+    tracking_code = request.GET.get("tracking_code")
+
+    if not tracking_code:
+        return JsonResponse({"error": "Tracking code is required"}, status=400)
+
+    try:
+        complaint = Complaint.objects.get(TrackingCode=tracking_code)
+    except Complaint.DoesNotExist:
+        return JsonResponse({"error": "Tracking code not found"}, status=404)
+
+    # Collect visible responses
+    responses = [
+        {
+            "message": r.Message,
+            "date": r.ResponseDate.strftime("%Y-%m-%d %H:%M"),
+        }
+        for r in complaint.responses.filter(VisibleToStudent=True)
+    ]
+
+    data = {
+        "status": complaint.Status,
+        "type": complaint.Type,
+        "title": complaint.Title,
+        "description": complaint.Description,
+        "created": complaint.CreatedDate.strftime("%b %d, %Y, %I:%M %p"),
+        "trackingCode": complaint.TrackingCode,
+        "responses": responses,
+    }
+    return JsonResponse(data)
+
+@csrf_exempt
+def password_reset_request(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            email = data.get("email")
+
+            if not email:
+                return JsonResponse({"success": False, "message": "Email is required"}, status=400)
+
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return JsonResponse({"success": True, "message": "If this email exists, a reset link will be sent."})  # Avoid revealing users
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_link = f"http://localhost:3000/reset-password/{quote(uid)}/{quote(token)}"
+
+            # Send email
+            send_mail(
+                subject="Password Reset",
+                message=f"Click here to reset your password: {reset_link}",
+                from_email=DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return JsonResponse({"success": True, "message": "Password reset email sent"})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
+
+@csrf_exempt
+def password_reset_confirm(request, uidb64, token):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            password = data.get("password")
+
+            if not password:
+                return JsonResponse({"success": False, "message": "Password is required"}, status=400)
+
+            try:
+                uid = urlsafe_base64_decode(uidb64).decode()
+                user = User.objects.get(pk=uid)
+            except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+                return JsonResponse({"success": False, "message": "Invalid user"}, status=404)
+
+            if not default_token_generator.check_token(user, token):
+                return JsonResponse({"success": False, "message": "Invalid or expired token"}, status=400)
+
+            user.set_password(password)
+            user.save()
+
+            return JsonResponse({"success": True, "message": "Password has been reset successfully"})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
 
 def GeneralManagerDashboard(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
         return redirect("home")
     return render(request, "general_manager_dashboard.html", {"user": request.user})
 
+
 def DepartmentManagerDashboard(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
         return redirect("home")
     return render(request, "department_manager_dashboard.html", {"user": request.user})
+
 
 def AllComplaints(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -165,6 +304,7 @@ def AllComplaints(request):
         "complaints": complaints,
         "departments": departments,
     })
+
 
 def DepartmentComplaints(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
@@ -194,52 +334,6 @@ def DepartmentComplaints(request):
         "complaints": complaints,
     })
 
-def submit_complaint(request):
-    if not request.user.is_authenticated or request.user.Role != "Student":
-        return redirect("home")
-
-    if request.method == "POST":
-        form = ComplaintForm(request.POST, request.FILES)
-        if form.is_valid():
-            complaint = form.save(commit=False)
-            complaint.TrackingCode = _generate_tracking_code()
-            complaint.save()
-
-            files = request.FILES.getlist("file")
-            for f in files:
-                ComplaintAttachment.objects.create(complaint=complaint, file=f)
-
-            try:
-                track_url = request.build_absolute_uri(
-                    reverse('members:track_complaint') + f'?tracking_code={complaint.TrackingCode}'
-                )
-                send_mail(
-                    subject='Your Complaint Tracking Code',
-                    message=(
-                        f'Dear {request.user.Name},\n\n'
-                        f'Your complaint has been submitted successfully. Please use the following tracking code to check the status of your complaint:\n\n'
-                        f'Tracking Code: {complaint.TrackingCode}\n\n'
-                        f'You can track your complaint at: {track_url}\n\n'
-                        f'Thank you,\nYour University Team'
-                    ),
-                    from_email='hanasmsalah105@example.com',
-                    recipient_list=[request.user.email],
-                    fail_silently=False,
-                )
-                messages.success(request,
-                                 'Your complaint has been submitted, and the tracking code has been sent to your email.')
-            except Exception as e:
-                messages.error(request,
-                               f'Your complaint was submitted, but there was an error sending the email: {str(e)}. Please contact support.')
-
-            return redirect("members:success")
-    else:
-        form = ComplaintForm()
-
-    return render(request, "submit_complaint.html", {"form": form})
-
-def Success(request):
-    return render(request, 'success.html')
 
 def GeneralManagerResponses(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -268,19 +362,3 @@ def PublishResponse(request, response_id):
             messages.success(request, "Response hidden from student.")
 
     return redirect("members:general_manager_responses")
-
-def TrackComplaint(request):
-    complaint = None
-    tracking_code = request.GET.get("tracking_code", "").strip().upper()
-    searched = False
-
-    if tracking_code:
-        searched = True
-        complaint = Complaint.objects.filter(TrackingCode=tracking_code).first()
-
-    return render(request, "track_complaint.html", {
-        "complaint": complaint,
-        "tracking_code": tracking_code,
-        "searched": searched,
-    })
-

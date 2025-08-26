@@ -42,31 +42,32 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "members.User"
 LOGIN_URL = '/members/login/'
 
-# --- CORS & CSRF Settings ---
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-CORS_ALLOW_CREDENTIALS = True  # allow cookies/session with cross-origin requests
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",   # trust Next.js dev server
-    "http://127.0.0.1:3000",
-]
+
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True  # allow cookies/session with cross-origin requests
 SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True   # Required with SameSite=None if using HTTPS
 
 ROOT_URLCONF = "summer_project.urls"
-# CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587

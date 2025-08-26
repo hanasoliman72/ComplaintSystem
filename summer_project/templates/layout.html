@@ -22,7 +22,7 @@
         </a> |
         {% if user.is_authenticated %}
             {% if user.Role == "Student" %}
-                <a href="{% url 'members:student_dashboard' %}">
+                <a href="{% url 'members:student_profile' %}">
                     <span role="img" aria-label="Student Dashboard" title="Student Dashboard">📚</span>
                 </a> |
             {% elif user.Role == "GeneralManager" %}
