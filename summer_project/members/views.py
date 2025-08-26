@@ -1,12 +1,5 @@
 import json
 from pipes import quote
-
-from django.contrib.auth.forms import PasswordResetForm
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-
-from summer_project.settings import DEFAULT_FROM_EMAIL
 from .serializers import *
 from rest_framework import status
 from django.utils import timezone
@@ -17,12 +10,15 @@ from django.contrib.auth import  logout
 from .models import _generate_tracking_code
 from rest_framework.response import Response
 from django.shortcuts import render, redirect
+from django.utils.encoding import force_bytes
 from rest_framework.decorators import api_view
 from django.contrib.auth import get_user_model
 from django.shortcuts import  get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
-
+from summer_project.settings import DEFAULT_FROM_EMAIL
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 User = get_user_model()
 
 @api_view(["POST"])
