@@ -26,7 +26,7 @@
                     <span role="img" aria-label="Student Dashboard" title="Student Dashboard">📚</span>
                 </a> |
             {% elif user.Role == "GeneralManager" %}
-                <a href="{% url 'members:general_manager_dashboard' %}">
+                <a href="{% url 'members:general_manager_profile' %}">
                     <span role="img" aria-label="General Manager Dashboard" title="General Manager Dashboard">👑</span>
                 </a> |
             {% elif user.Role == "DepartmentManager" %}

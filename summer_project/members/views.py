@@ -7,8 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.contrib.auth import  logout
-from .models import _generate_tracking_code
-from rest_framework.response import Response
+from .models import _generate_tracking_code, Response
 from django.shortcuts import render, redirect
 from django.utils.encoding import force_bytes
 from rest_framework.decorators import api_view
@@ -100,36 +99,8 @@ def StudentProfile(request):
                 }
             }, status=200)
         except Exception as e:
-            print("ERROR in StudentDashboard GET:", e)
+            print("ERROR in StudentProfile GET:", e)
             return JsonResponse({"success": False, "message": str(e)}, status=500)
-
-    elif request.method == "PUT":
-        try:
-            data = json.loads(request.body.decode("utf-8"))
-            user = request.user
-
-            if "name" in data:
-                user.first_name = data["name"]  # store in first_name
-            if "username" in data:
-                user.username = data["username"]
-
-            user.save()
-
-            return JsonResponse({
-                "success": True,
-                "message": "Profile updated successfully",
-                "user": {
-                    "id": user.pk,
-                    "name": user.Name,
-                    "username": user.username,
-                    "email": user.email,
-                    "gpa": float(getattr(user, "GPA", 0)) if hasattr(user, "GPA") else None,
-                }
-            }, status=200)
-        except Exception as e:
-            print("ERROR in StudentDashboard PUT:", e)
-            return JsonResponse({"success": False, "message": str(e)}, status=500)
-
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
 @csrf_exempt
@@ -264,43 +235,147 @@ def password_reset_confirm(request, uidb64, token):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
 
-def GeneralManagerDashboard(request):
+@csrf_exempt
+def GeneralManagerProfile(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
-        return redirect("home")
-    return render(request, "general_manager_dashboard.html", {"user": request.user})
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
 
+    if request.method == "GET":
+        try:
+            user = request.user
+            return JsonResponse({
+                "success": True,
+                "user": {
+                    "id": user.pk,
+                    "name": user.Name,
+                    "username": user.username,
+                    "email": user.email,
+                }
+            }, status=200)
+        except Exception as e:
+            print("ERROR in GeneralManagerProfile GET:", e)
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def AllComplaints(request):
+    if request.method == "GET":
+        complaints = Complaint.objects.all().select_related("DepartmentId").prefetch_related("attachments")
+
+        data = []
+        for complaint in complaints:
+            data.append({
+                "ComplaintId": complaint.ComplaintId,
+                "TrackingCode": complaint.TrackingCode,
+                "Type": complaint.Type,
+                "Title": complaint.Title,
+                "Description": complaint.Description,
+                "Status": complaint.Status,
+                "Department": complaint.DepartmentId.DepartmentName if complaint.DepartmentId else None,
+                "CreatedDate": complaint.CreatedDate.strftime("%Y-%m-%d %H:%M"),
+                "Attachments": [
+                    request.build_absolute_uri(att.file.url) if att.file else None
+                    for att in complaint.attachments.all()
+                ],
+            })
+
+        departments = Department.objects.all()
+        departments_data = [
+            {"DepartmentId": d.pk, "DepartmentName": d.DepartmentName}
+            for d in departments
+        ]
+        return JsonResponse({
+            "complaints": data,
+            "departments": departments_data
+        })
+
+    elif request.method == "POST":
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+            complaint_id = body.get("ComplaintId")
+            department_id = body.get("DepartmentId")
+
+            complaint = Complaint.objects.get(ComplaintId=complaint_id)
+            department = Department.objects.get(pk=department_id)
+
+            complaint.DepartmentId = department
+            complaint.Status = "In Review"
+            complaint.save()
+
+            return JsonResponse({"success": True, "message": "Complaint assigned successfully"})
+        except Complaint.DoesNotExist:
+            return JsonResponse({"error": "Complaint not found"}, status=404)
+        except Department.DoesNotExist:
+            return JsonResponse({"error": "Department not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+@csrf_exempt
+def GeneralManagerResponses(request):
+    if not request.user.is_authenticated or request.user.Role != "GeneralManager":
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    responses = Response.objects.select_related("ComplaintId", "SenderId").order_by("-ResponseDate")
+
+    data = [
+        {
+            "id": r.pk,
+            "complaintTitle": r.ComplaintId.Title,
+            "responseMessage": r.Message,
+            "senderDepartment": r.SenderId.DepartmentId.DepartmentName,
+            "responseDate": r.ResponseDate.strftime("%Y-%m-%d"),
+            "visible": r.VisibleToStudent,
+        }
+        for r in responses
+    ]
+    return JsonResponse(data, safe=False)
+
+@csrf_exempt
+def PublishResponse(request, response_id):
+    if not request.user.is_authenticated or request.user.Role != "GeneralManager":
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    response = get_object_or_404(Response, pk=response_id)
+
+    if request.method == "POST":
+        try:
+            import json
+            body = json.loads(request.body.decode("utf-8"))
+            new_visible = body.get("visible", None)
+
+            if new_visible is None:
+                return JsonResponse({"error": "Missing 'visible' field"}, status=400)
+
+            if new_visible:
+                response.VisibleToStudent = True
+                response.PublishedAt = timezone.now()
+                msg = "Response published to student."
+            else:
+                response.VisibleToStudent = False
+                response.PublishedAt = None
+                msg = "Response hidden from student."
+
+            response.save(update_fields=["VisibleToStudent", "PublishedAt"])
+
+            return JsonResponse({
+                "id": response.pk,
+                "complaintTitle": response.ComplaintId.Title,
+                "responseMessage": response.Message,
+                "senderDepartment": response.SenderId.DepartmentId.DepartmentName,
+                "responseDate": response.ResponseDate.strftime("%Y-%m-%d"),
+                "visible": response.VisibleToStudent,
+                "message": msg,
+            })
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 def DepartmentManagerDashboard(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
         return redirect("home")
     return render(request, "department_manager_dashboard.html", {"user": request.user})
-
-
-def AllComplaints(request):
-    if not request.user.is_authenticated or request.user.Role != "GeneralManager":
-        return redirect("home")
-
-    complaints = Complaint.objects.all().order_by("-CreatedDate")
-    departments = Department.objects.all()
-
-    if request.method == "POST":
-        complaint_id = request.POST.get("complaint_id")
-        department_id = request.POST.get("department_id")
-
-        complaint = get_object_or_404(Complaint, pk=complaint_id)
-        department = get_object_or_404(Department, pk=department_id)
-
-        complaint.DepartmentId = department
-        complaint.Status = "In Review"
-        complaint.save()
-
-        return redirect("members:all_complaints")
-
-    return render(request, "all_complaints.html", {
-        "complaints": complaints,
-        "departments": departments,
-    })
-
 
 def DepartmentComplaints(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
@@ -330,31 +405,3 @@ def DepartmentComplaints(request):
         "complaints": complaints,
     })
 
-
-def GeneralManagerResponses(request):
-    if not request.user.is_authenticated or request.user.Role != "GeneralManager":
-        return redirect("home")
-
-    responses = Response.objects.select_related("ComplaintId", "SenderId").order_by("-ResponseDate")
-    return render(request, "general_manager_responses.html", {"responses": responses})
-
-def PublishResponse(request, response_id):
-    if not request.user.is_authenticated or request.user.Role != "GeneralManager":
-        return redirect("home")
-
-    response = get_object_or_404(Response, pk=response_id)
-
-    if request.method == "POST":
-        action = request.POST.get("action")
-        if action == "publish":
-            response.VisibleToStudent = True
-            response.PublishedAt = timezone.now()
-            response.save(update_fields=["VisibleToStudent", "PublishedAt"])
-            messages.success(request, "Response published to student.")
-        elif action == "unpublish":
-            response.VisibleToStudent = False
-            response.PublishedAt = None
-            response.save(update_fields=["VisibleToStudent", "PublishedAt"])
-            messages.success(request, "Response hidden from student.")
-
-    return redirect("members:general_manager_responses")
