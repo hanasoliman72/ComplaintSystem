@@ -18,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from summer_project.settings import DEFAULT_FROM_EMAIL
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from rest_framework.response import Response
+# from rest_framework.response import Response
 
 User = get_user_model()
 
@@ -430,6 +430,7 @@ def PublishResponse(request, response_id):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@csrf_exempt
 def DepartmentManagerProfile(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
         return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
@@ -455,29 +456,56 @@ def DepartmentManagerProfile(request):
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
 
+@csrf_exempt  # ⚠️ TEMPORARY – better: use CSRF token from frontend
 def DepartmentComplaints(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
-        return redirect("home")
+        return JsonResponse({"error": "Unauthorized"}, status=403)
 
-    complaints = Complaint.objects.filter(DepartmentId=request.user.DepartmentId, Status="In Review")
-
-    if request.method == "POST":
-        complaint_id = request.POST.get("complaint_id")
-        message_text = request.POST.get("message_text")
-
-        complaint = get_object_or_404(Complaint, pk=complaint_id)
-
-        Response.objects.create(
-            ComplaintId=complaint,
-            SenderId=request.user,
-            Message=message_text,
+    if request.method == "GET":
+        complaints = Complaint.objects.filter(
+            DepartmentId=request.user.DepartmentId,
+            Status="In Review"
         )
 
-        complaint.Status = "Resolved"
-        complaint.save()
+        data = []
+        for c in complaints:
+            attachments = c.attachments.all()
+            data.append({
+                "id": c.pk,
+                "type": c.Type,
+                "title": c.Title,
+                "description": c.Description,
+                "status": c.Status,
+                "createdDate": c.CreatedDate.strftime("%Y-%m-%d %H:%M"),
+                "attachments": [a.file.url for a in attachments if a.file],
+                "response": None,
+            })
 
-        messages.success(request, "Response recorded successfully.")
-        return redirect('members:department_complaints')
-    return render(request, "department_complaints.html", {
-        "complaints": complaints,
-    })
+        return JsonResponse(data, safe=False)
+
+    elif request.method == "POST":
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+            complaint_id = body.get("complaint_id")
+            response_text = body.get("response")
+
+            if not complaint_id or not response_text:
+                return JsonResponse({"error": "Missing complaint_id or response"}, status=400)
+
+            complaint = get_object_or_404(Complaint, pk=complaint_id)
+
+            Response.objects.create(
+                ComplaintId=complaint,
+                SenderId=request.user,
+                Message=response_text,
+            )
+
+            complaint.Status = "Resolved"
+            complaint.save()
+
+            return JsonResponse({"success": True, "message": "Response recorded successfully."}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
