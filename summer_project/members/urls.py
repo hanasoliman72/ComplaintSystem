@@ -9,7 +9,7 @@ urlpatterns = [
     path('logout/', views.LogoutView, name='logout'),
 
     path('student/profile/', views.StudentProfile, name='student_profile'),
-    path('department/dashboard/', views.DepartmentManagerDashboard, name='department_manager_dashboard'),
+    path('department/profile/', views.DepartmentManagerProfile, name='department_manager_profile'),
     path('general/profile/', views.GeneralManagerProfile, name='general_manager_profile'),
     path('allComplaints/', views.AllComplaints, name="all_complaints"),
     path('departmentComplaints/', views.DepartmentComplaints, name="department_complaints"),

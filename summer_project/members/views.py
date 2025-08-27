@@ -6,27 +6,74 @@ from django.utils import timezone
 from django.contrib import messages
 from django.http import JsonResponse
 from django.core.mail import send_mail
-from django.contrib.auth import  logout
+from django.contrib.auth import logout
 from .models import _generate_tracking_code, Response
 from django.shortcuts import render, redirect
 from django.utils.encoding import force_bytes
 from rest_framework.decorators import api_view
 from django.contrib.auth import get_user_model
-from django.shortcuts import  get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from summer_project.settings import DEFAULT_FROM_EMAIL
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from rest_framework.response import Response
+
 User = get_user_model()
 
+
 @api_view(["POST"])
+@csrf_exempt
 def RegisterView(request):
-    serializer = UserSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            username = data.get("username")
+            password = data.get("password")
+            name = data.get("Name")
+            email = data.get("email")
+            gpa = data.get("GPA", 0)
+            role = data.get("role", "Student")
+
+            # Basic validation
+            if not username or not password:
+                return JsonResponse({"success": False, "message": "Username and password required"}, status=400)
+
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({"success": False, "message": "Username already taken"}, status=400)
+
+            if User.objects.filter(email=email).exists():
+                return JsonResponse({"success": False, "message": "Email already registered"}, status=400)
+
+            # Create the user (using create_user so password is hashed)
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                Name=name,
+                email=email,
+                GPA=gpa,
+                Role=role
+            )
+
+            return JsonResponse({
+                "success": True,
+                "message": "User registered successfully",
+                "user": {
+                    "id": user.pk,
+                    "username": user.username,
+                    "email": user.email,
+                    "name": user.Name,
+                    "gpa": user.GPA,
+                    "role": user.Role
+                }
+            }, status=201)
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Server error: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
 
 @csrf_exempt
 def LoginView(request):
@@ -72,6 +119,7 @@ def LoginView(request):
 
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
+
 @csrf_exempt
 def LogoutView(request):
     if request.method == "POST":
@@ -79,6 +127,7 @@ def LogoutView(request):
         return JsonResponse({"success": True, "message": "Logged out successfully"})
 
     return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
+
 
 @csrf_exempt
 def StudentProfile(request):
@@ -103,6 +152,7 @@ def StudentProfile(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
+
 @csrf_exempt
 def SubmitComplaint(request):
     if request.method == "POST":
@@ -121,7 +171,6 @@ def SubmitComplaint(request):
         files = request.FILES.getlist("file")
         for f in files:
             ComplaintAttachment.objects.create(complaint=complaint, file=f)
-
 
         # send email
         try:
@@ -142,6 +191,7 @@ def SubmitComplaint(request):
         return JsonResponse({"success": True, "tracking_code": complaint.TrackingCode})
 
     return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
+
 
 @csrf_exempt
 def TrackComplaint(request):
@@ -175,6 +225,7 @@ def TrackComplaint(request):
     }
     return JsonResponse(data)
 
+
 @csrf_exempt
 def password_reset_request(request):
     if request.method == "POST":
@@ -188,7 +239,8 @@ def password_reset_request(request):
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
-                return JsonResponse({"success": True, "message": "If this email exists, a reset link will be sent."})  # Avoid revealing users
+                return JsonResponse({"success": True,
+                                     "message": "If this email exists, a reset link will be sent."})  # Avoid revealing users
 
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
@@ -207,6 +259,7 @@ def password_reset_request(request):
         except Exception as e:
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
+
 
 @csrf_exempt
 def password_reset_confirm(request, uidb64, token):
@@ -235,6 +288,7 @@ def password_reset_confirm(request, uidb64, token):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
 
+
 @csrf_exempt
 def GeneralManagerProfile(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -256,6 +310,7 @@ def GeneralManagerProfile(request):
             print("ERROR in GeneralManagerProfile GET:", e)
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
 
 @csrf_exempt
 def AllComplaints(request):
@@ -310,6 +365,7 @@ def AllComplaints(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
 
+
 @csrf_exempt
 def GeneralManagerResponses(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -329,6 +385,7 @@ def GeneralManagerResponses(request):
         for r in responses
     ]
     return JsonResponse(data, safe=False)
+
 
 @csrf_exempt
 def PublishResponse(request, response_id):
@@ -372,10 +429,31 @@ def PublishResponse(request, response_id):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-def DepartmentManagerDashboard(request):
+
+def DepartmentManagerProfile(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
-        return redirect("home")
-    return render(request, "department_manager_dashboard.html", {"user": request.user})
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+
+    if request.method == "GET":
+        try:
+            user = request.user
+            return JsonResponse({
+                "success": True,
+                "user": {
+                    "id": user.pk,
+                    "name": user.Name,
+                    "username": user.username,
+                    "email": user.email,
+                    "role": user.Role,
+                    "department": user.DepartmentId.DepartmentName if user.DepartmentId else None,
+                    "department_id": user.DepartmentId_id,
+                }
+            }, status=200)
+        except Exception as e:
+            print("ERROR in DepartmentManagerProfile GET:", e)
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
 
 def DepartmentComplaints(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
@@ -388,7 +466,6 @@ def DepartmentComplaints(request):
         message_text = request.POST.get("message_text")
 
         complaint = get_object_or_404(Complaint, pk=complaint_id)
-
 
         Response.objects.create(
             ComplaintId=complaint,
@@ -404,4 +481,3 @@ def DepartmentComplaints(request):
     return render(request, "department_complaints.html", {
         "complaints": complaints,
     })
-
