@@ -1,24 +1,20 @@
 import json
 from pipes import quote
-from .serializers import *
-from rest_framework import status
 from django.utils import timezone
-from django.contrib import messages
-from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.contrib.auth import logout
-from .models import _generate_tracking_code, Response
-from django.shortcuts import render, redirect
 from django.utils.encoding import force_bytes
-from rest_framework.decorators import api_view
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view
 from django.contrib.auth import authenticate, login
+from .models import _generate_tracking_code, Response, Department, Complaint, ComplaintAttachment
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password
 from summer_project.settings import DEFAULT_FROM_EMAIL
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-# from rest_framework.response import Response
+
 
 User = get_user_model()
 
@@ -38,13 +34,21 @@ def RegisterView(request):
 
             # Basic validation
             if not username or not password:
-                return JsonResponse({"success": False, "message": "Username and password required"}, status=400)
+                return JsonResponse("Username and password required", safe=False, status=400)
 
             if User.objects.filter(username=username).exists():
-                return JsonResponse({"success": False, "message": "Username already taken"}, status=400)
+                return JsonResponse("Username already taken", safe=False, status=400)
 
             if User.objects.filter(email=email).exists():
-                return JsonResponse({"success": False, "message": "Email already registered"}, status=400)
+                return JsonResponse("Email already registered", safe=False, status=400)
+
+            # GPA validation
+            try:
+                gpa = float(gpa)
+                if gpa < 0 or gpa > 4:
+                    return JsonResponse("GPA must be between 0 and 4", safe=False, status=400)
+            except ValueError:
+                return JsonResponse("GPA must be a number", safe=False, status=400)
 
             # Create the user (using create_user so password is hashed)
             user = User.objects.create_user(
@@ -73,7 +77,6 @@ def RegisterView(request):
             return JsonResponse({"success": False, "message": f"Server error: {str(e)}"}, status=500)
 
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def LoginView(request):
@@ -119,7 +122,6 @@ def LoginView(request):
 
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
-
 @csrf_exempt
 def LogoutView(request):
     if request.method == "POST":
@@ -127,7 +129,6 @@ def LogoutView(request):
         return JsonResponse({"success": True, "message": "Logged out successfully"})
 
     return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
-
 
 @csrf_exempt
 def StudentProfile(request):
@@ -151,7 +152,6 @@ def StudentProfile(request):
             print("ERROR in StudentProfile GET:", e)
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def SubmitComplaint(request):
@@ -192,7 +192,6 @@ def SubmitComplaint(request):
 
     return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
 
-
 @csrf_exempt
 def TrackComplaint(request):
     tracking_code = request.GET.get("tracking_code")
@@ -224,7 +223,6 @@ def TrackComplaint(request):
         "responses": responses,
     }
     return JsonResponse(data)
-
 
 @csrf_exempt
 def password_reset_request(request):
@@ -260,7 +258,6 @@ def password_reset_request(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
 
-
 @csrf_exempt
 def password_reset_confirm(request, uidb64, token):
     if request.method == "POST":
@@ -288,7 +285,6 @@ def password_reset_confirm(request, uidb64, token):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Only POST method allowed"}, status=405)
 
-
 @csrf_exempt
 def GeneralManagerProfile(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -310,7 +306,6 @@ def GeneralManagerProfile(request):
             print("ERROR in GeneralManagerProfile GET:", e)
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def AllComplaints(request):
@@ -365,7 +360,6 @@ def AllComplaints(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
 
-
 @csrf_exempt
 def GeneralManagerResponses(request):
     if not request.user.is_authenticated or request.user.Role != "GeneralManager":
@@ -385,7 +379,6 @@ def GeneralManagerResponses(request):
         for r in responses
     ]
     return JsonResponse(data, safe=False)
-
 
 @csrf_exempt
 def PublishResponse(request, response_id):
@@ -429,7 +422,6 @@ def PublishResponse(request, response_id):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-
 @csrf_exempt
 def DepartmentManagerProfile(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
@@ -455,8 +447,7 @@ def DepartmentManagerProfile(request):
             return JsonResponse({"success": False, "message": str(e)}, status=500)
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
-
-@csrf_exempt  # ⚠️ TEMPORARY – better: use CSRF token from frontend
+@csrf_exempt
 def DepartmentComplaints(request):
     if not request.user.is_authenticated or request.user.Role != "DepartmentManager":
         return JsonResponse({"error": "Unauthorized"}, status=403)
@@ -509,3 +500,138 @@ def DepartmentComplaints(request):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def AddUser(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+
+            username = data.get("username")
+            email = data.get("email")
+            name = data.get("name")
+            role = data.get("role")
+            dept_name = data.get("dept")  # matches frontend key
+            password = data.get("password")
+
+            # check required fields
+            if not all([username, email, name, role, password]):
+                return JsonResponse("Missing required fields", safe=False, status=400)
+
+            # check if username/email already exists
+            if User.objects.filter(username=username).exists():
+                return JsonResponse("Username already taken", safe=False, status=400)
+
+            if User.objects.filter(email=email).exists():
+                return JsonResponse("Email already exists", safe=False, status=400)
+
+            # get department object if provided
+            department = None
+            if dept_name:
+                try:
+                    department = Department.objects.get(DepartmentName=dept_name)
+                except Department.DoesNotExist:
+                    return JsonResponse("Invalid department", safe=False, status=400)
+
+            # create user
+            user = User.objects.create(
+                username=username,
+                email=email,
+                Name=name,
+                Role=role,
+                DepartmentId=department,
+                password=make_password(password),
+            )
+
+            return JsonResponse(f"User created successfully", safe=False, status=201)
+
+        except Exception as e:
+            return JsonResponse(f"Server error: {str(e)}", safe=False, status=500)
+
+    return JsonResponse("Invalid request method", safe=False, status=405)
+
+from django.http import JsonResponse
+from .models import User
+
+def GetUsers(request):
+    if request.method == "GET":
+        try:
+            # exclude General Managers
+            users = User.objects.exclude(Role="GeneralManager").values(
+                "UserId", "username", "Name", "email", "Role", "GPA", "DepartmentId__DepartmentName"
+            )
+
+            users_list = [
+                {
+                    "UserId": u["UserId"],
+                    "username": u["username"],
+                    "name": u["Name"],
+                    "email": u["email"],
+                    "role": u["Role"],
+                    "gpa": float(u["GPA"]),
+                    "department": u["DepartmentId__DepartmentName"] or "-",
+                }
+                for u in users
+            ]
+            return JsonResponse({"users": users_list}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def DeleteUser(request, user_id):
+    if request.method == "DELETE":
+        try:
+            user = User.objects.get(UserId=user_id)
+
+            # Optional: prevent deleting General Managers
+            if user.Role == "GeneralManager":
+                return JsonResponse({"error": "Cannot delete a General Manager"}, status=403)
+
+            user.delete()
+            return JsonResponse({"message": "User deleted successfully"}, status=200)
+
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def GetDepartments(request):
+    if request.method == "GET":
+        departments = Department.objects.all().values("DepartmentName")
+        dept_list = [d["DepartmentName"] for d in departments]
+        return JsonResponse({"departments": dept_list}, status=200)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def DeleteDepartment(request, dept_id):
+    if request.method == "DELETE":
+        try:
+            dept = Department.objects.get(pk=dept_id)
+            dept.delete()
+            return JsonResponse({"message": "Department deleted successfully"}, status=200)
+        except Department.DoesNotExist:
+            return JsonResponse({"error": "Department not found"}, status=404)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def EditDepartment(request, dept_id):
+    if request.method != "PUT":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+    try:
+        data = json.loads(request.body)
+        dept = Department.objects.get(pk=dept_id)
+        name = data.get("name")
+        if not name:
+            return JsonResponse({"error": "Name is required"}, status=400)
+        dept.DepartmentName = name
+        dept.save()
+        return JsonResponse({"message": "Department updated successfully"}, status=200)
+    except Department.DoesNotExist:
+        return JsonResponse({"error": "Department not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
