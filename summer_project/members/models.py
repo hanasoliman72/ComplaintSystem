@@ -71,7 +71,7 @@ class ComplaintAttachment(models.Model):
     complaint = models.ForeignKey(
         Complaint, on_delete=models.CASCADE, related_name="attachments"
     )
-    file = models.FileField(upload_to="complaint_attachments/", blank=True, null=True)
+    file = models.FileField(upload_to="", blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

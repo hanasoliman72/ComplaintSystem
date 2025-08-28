@@ -468,7 +468,7 @@ def DepartmentComplaints(request):
                 "description": c.Description,
                 "status": c.Status,
                 "createdDate": c.CreatedDate.strftime("%Y-%m-%d %H:%M"),
-                "attachments": [a.file.url for a in attachments if a.file],
+                "attachments": [request.build_absolute_uri(a.file.url) for a in attachments if a.file],
                 "response": None,
             })
 
