@@ -23,6 +23,7 @@ urlpatterns = [
     path("departments/", views.GetDepartments, name="get-departments"),
     path("departments/delete/<int:dept_id>/", views.DeleteDepartment, name="delete_department"),
     path("departments/<int:dept_id>/edit/", views.EditDepartment, name="edit_department"),
+    path("departments/add/", views.AddDepartment, name="add_department"),
 
     path("password-reset/", views.password_reset_request, name="password_reset"),
     path("password-reset-confirm/<str:uidb64>/<str:token>/", views.password_reset_confirm, name="password_reset_confirm"),

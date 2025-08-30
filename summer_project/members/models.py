@@ -12,7 +12,7 @@ def _generate_tracking_code():
 
 class Department(models.Model):
     DepartmentId = models.AutoField(primary_key=True)
-    DepartmentName = models.CharField(max_length=255)
+    DepartmentName = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.DepartmentName
