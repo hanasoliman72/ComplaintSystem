@@ -77,14 +77,17 @@ SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True   # Required with SameSite=None if using HTTPS
 
 ROOT_URLCONF = "summer_project.urls"
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
-EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
+
+EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
 DEFAULT_FROM_EMAIL = 'hanasmsalah105@gmail.com'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
+# EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
