@@ -61,13 +61,13 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://complaintandsuggestions-gil5p6als.vercel.app",
+    "https://complaintandsuggestions.vercel.app/"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "https://complaintandsuggestions-gil5p6als.vercel.app",
+    "https://complaintandsuggestions.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True  # allow cookies/session with cross-origin requests

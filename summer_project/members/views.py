@@ -250,7 +250,7 @@ def password_reset_request(request):
 
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            reset_link = f"https://complaintsystem-steel.vercel.app/reset-password/{quote(uid)}/{quote(token)}"
+            reset_link = f"https://complaintandsuggestions.vercel.app/reset-password/{quote(uid)}/{quote(token)}"
 
             # Send email
             send_mail(
