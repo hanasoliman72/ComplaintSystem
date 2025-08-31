@@ -636,9 +636,9 @@ def DeleteUser(request, user_id):
 @csrf_exempt
 def GetDepartments(request):
     if request.method == "GET":
-        departments = Department.objects.all().values("id", "DepartmentName")
+        departments = Department.objects.all().values("DepartmentId", "DepartmentName")
         dept_list = [
-            {"id": d["id"], "name": d["DepartmentName"]}
+            {"id": d["DepartmentId"], "name": d["DepartmentName"]}
             for d in departments
         ]
         return JsonResponse({"departments": dept_list}, status=200)
