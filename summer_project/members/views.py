@@ -11,6 +11,8 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from django.contrib.auth import authenticate, login
+
+from summer_project import settings
 from .models import _generate_tracking_code, Response, Department, Complaint, ComplaintAttachment
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
@@ -187,7 +189,7 @@ def SubmitComplaint(request):
                     f"Your complaint has been submitted successfully.\n"
                     f"Tracking Code: {complaint.TrackingCode}\n"
                 ),
-                from_email="hanasmsalah105@gmail.com",
+                from_email= settings.EMAIL_HOST_USER,
                 recipient_list=[request.user.email],
                 fail_silently=False,
             )

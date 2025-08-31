@@ -82,9 +82,11 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
-EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
-DEFAULT_FROM_EMAIL = 'hanasmsalah105@gmail.com'
+# EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
+# EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
+EMAIL_HOST_USER = 'hana74@pythonanywhere.com'
+EMAIL_HOST_PASSWORD = 'Hana_27112020'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
