@@ -187,7 +187,7 @@ def SubmitComplaint(request):
                     f"Your complaint has been submitted successfully.\n"
                     f"Tracking Code: {complaint.TrackingCode}\n"
                 ),
-                from_email="noreply@university.com",
+                from_email="hanasmsalah105@gmail.com",
                 recipient_list=[request.user.email],
                 fail_silently=False,
             )
@@ -585,7 +585,7 @@ def AddUser(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-
+@csrf_exempt
 def GetUsers(request):
     if request.method == "GET":
         try:
