@@ -189,7 +189,7 @@ def SubmitComplaint(request):
                     f"Your complaint has been submitted successfully.\n"
                     f"Tracking Code: {complaint.TrackingCode}\n"
                 ),
-                from_email= settings.EMAIL_HOST_USER,
+                from_email= "hana74@pythonanywhere.com",
                 recipient_list=[request.user.email],
                 fail_silently=False,
             )
