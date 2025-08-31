@@ -633,12 +633,14 @@ def DeleteUser(request, user_id):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-
 @csrf_exempt
 def GetDepartments(request):
     if request.method == "GET":
-        departments = Department.objects.all().values("DepartmentName")
-        dept_list = [d["DepartmentName"] for d in departments]
+        departments = Department.objects.all().values("id", "DepartmentName")
+        dept_list = [
+            {"id": d["id"], "name": d["DepartmentName"]}
+            for d in departments
+        ]
         return JsonResponse({"departments": dept_list}, status=200)
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
