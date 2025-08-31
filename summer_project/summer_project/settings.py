@@ -79,14 +79,12 @@ SESSION_COOKIE_SECURE = True   # Required with SameSite=None if using HTTPS
 ROOT_URLCONF = "summer_project.urls"
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.pythonanywhere.com'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
-# EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
-EMAIL_HOST_USER = 'hana74@pythonanywhere.com'
-EMAIL_HOST_PASSWORD = 'Hana_27112020'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_USER = 'hanasmsalah105@gmail.com'
+EMAIL_HOST_PASSWORD = 'rbzb guno glmp mxmk'
+DEFAULT_FROM_EMAIL = 'hanasmsalah105@gmail.com'
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
