@@ -61,7 +61,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://complaintandsuggestions.vercel.app/"
+    "https://complaintandsuggestions.vercel.app"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -75,6 +75,7 @@ SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True   # Required with SameSite=None if using HTTPS
 CSRF_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SECURE = True
+CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 
 ROOT_URLCONF = "summer_project.urls"
 
