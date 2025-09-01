@@ -165,26 +165,43 @@ def SubmitComplaint(request):
         if not request.user.is_authenticated or request.user.Role != "Student":
             return JsonResponse({"success": False, "message": "Unauthorized"}, status=403)
 
+        # --- VALIDATION ---
+        title = request.POST.get("title", "").strip()
+        description = request.POST.get("description", "").strip()
+        type_ = request.POST.get("type")
+
+        if type_ not in ["Complaint", "Suggestion"]:
+            return JsonResponse({"success": False, "message": "Invalid type"}, status=400)
+
+        if not title or len(title) < 5:
+            return JsonResponse({"success": False, "message": "Title must be at least 5 characters"}, status=400)
+
+        if not description or len(description) < 15:
+            return JsonResponse({"success": False, "message": "Description must be at least 15 characters"}, status=400)
+
+        # Create complaint
         complaint = Complaint.objects.create(
-            Type=request.POST.get("type"),
-            Title=request.POST.get("title"),
-            Description=request.POST.get("description"),
+            Type=type_,
+            Title=title,
+            Description=description,
             TrackingCode=_generate_tracking_code(),
             DepartmentId=request.user.DepartmentId
         )
 
-        # save attachment
+        # Save attachments
         files = request.FILES.getlist("file")
         for f in files:
+            if f.size > 5 * 1024 * 1024:  # max 5 MB
+                return JsonResponse({"success": False, "message": "File too large (max 5MB)"}, status=400)
             ComplaintAttachment.objects.create(complaint=complaint, file=f)
 
-        # send email
+        # Send confirmation email
         try:
             send_mail(
                 subject="Your Complaint Tracking Code",
                 message=(
                     f"Dear {request.user.Name},\n\n"
-                    f"Your complaint has been submitted successfully.\n"
+                    f"Your {type_.lower()} has been submitted successfully.\n"
                     f"Tracking Code: {complaint.TrackingCode}\n"
                 ),
                 from_email="hanasmsalah105@gmail.com",
@@ -192,11 +209,16 @@ def SubmitComplaint(request):
                 fail_silently=False,
             )
         except Exception as e:
-            return JsonResponse({"success": True, "tracking_code": complaint.TrackingCode, "email_error": str(e)})
+            return JsonResponse({
+                "success": True,
+                "tracking_code": complaint.TrackingCode,
+                "email_error": str(e)
+            })
 
         return JsonResponse({"success": True, "tracking_code": complaint.TrackingCode})
 
     return JsonResponse({"success": False, "message": "Invalid request"}, status=400)
+
 
 
 @csrf_exempt
